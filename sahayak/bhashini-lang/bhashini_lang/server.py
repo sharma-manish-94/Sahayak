@@ -1,15 +1,41 @@
-"""bhashini-lang MCP server — exposes Bhashini language tools."""
+"""bhashini-lang MCP server — exposes Indian language tools.
+
+Provider selection via LANG_PROVIDER env var:
+  - "sarvam"   → Sarvam AI (sovereign, recommended)
+  - "bhashini"  → Bhashini ULCA (default)
+  - "auto"      → Sarvam if SARVAM_API_KEY is set, else Bhashini
+
+Fallback chain: primary provider → Whisper (ASR) / passthrough (NMT) / empty (TTS)
+"""
 
 from __future__ import annotations
 
+import os
+
 from fastmcp import FastMCP
 
-from . import client, fallback
+from . import client as bhashini_client
+from . import sarvam as sarvam_client
+from . import fallback
 from .types import LanguageDetection, TranslationResult, SpeechToTextResult, TextToSpeechResult
+
+
+def _get_provider():
+    """Resolve which language provider to use."""
+    provider = os.environ.get("LANG_PROVIDER", "auto").lower()
+    if provider == "sarvam":
+        return sarvam_client
+    if provider == "bhashini":
+        return bhashini_client
+    # auto: prefer Sarvam if key is set
+    if os.environ.get("SARVAM_API_KEY"):
+        return sarvam_client
+    return bhashini_client
+
 
 mcp = FastMCP(
     "bhashini-lang",
-    instructions="Bhashini language services — detection, translation, ASR, TTS for Indian languages",
+    instructions="Indian language services — detection, translation, ASR, TTS. Supports Sarvam AI and Bhashini ULCA providers.",
 )
 
 
@@ -20,8 +46,12 @@ async def detect_language(text: str) -> dict:
     Args:
         text: The text to detect language for
     """
-    result = await client.detect_language(text)
-    return LanguageDetection(**result).model_dump()
+    provider = _get_provider()
+    result = await provider.detect_language(text)
+    return LanguageDetection(
+        language=result["language"],
+        confidence=result.get("confidence", 0.9),
+    ).model_dump()
 
 
 @mcp.tool()
@@ -33,10 +63,16 @@ async def translate(text: str, source_lang: str, target_lang: str) -> dict:
         source_lang: Source language code — "hi" (Hindi), "en" (English), "bn" (Bengali), "ta" (Tamil), etc.
         target_lang: Target language code
     """
+    provider = _get_provider()
     try:
-        translated = await client.translate_text(text, source_lang, target_lang)
+        translated = await provider.translate_text(text, source_lang, target_lang)
     except Exception:
-        translated = await fallback.passthrough_translate(text, source_lang, target_lang)
+        # Fallback: try the other provider
+        other = sarvam_client if provider is bhashini_client else bhashini_client
+        try:
+            translated = await other.translate_text(text, source_lang, target_lang)
+        except Exception:
+            translated = await fallback.passthrough_translate(text, source_lang, target_lang)
 
     return TranslationResult(
         translated_text=translated,
@@ -54,10 +90,16 @@ async def speech_to_text(audio_base64: str, source_lang: str | None = None) -> d
         source_lang: Expected language code, e.g. "hi". If None, defaults to Hindi.
     """
     lang = source_lang or "hi"
+    provider = _get_provider()
     try:
-        result = await client.speech_to_text(audio_base64, lang)
+        result = await provider.speech_to_text(audio_base64, lang)
     except Exception:
-        result = await fallback.whisper_transcribe(audio_base64, lang)
+        # Fallback: try other provider, then Whisper
+        other = sarvam_client if provider is bhashini_client else bhashini_client
+        try:
+            result = await other.speech_to_text(audio_base64, lang)
+        except Exception:
+            result = await fallback.whisper_transcribe(audio_base64, lang)
 
     return SpeechToTextResult(
         text=result.get("text", ""),
@@ -74,10 +116,15 @@ async def text_to_speech(text: str, target_lang: str = "hi", gender: str = "fema
         target_lang: Language code, e.g. "hi" for Hindi
         gender: Voice gender — "male" or "female"
     """
+    provider = _get_provider()
     try:
-        result = await client.text_to_speech(text, target_lang, gender)
+        result = await provider.text_to_speech(text, target_lang, gender)
     except Exception:
-        result = fallback.empty_tts()
+        other = sarvam_client if provider is bhashini_client else bhashini_client
+        try:
+            result = await other.text_to_speech(text, target_lang, gender)
+        except Exception:
+            result = fallback.empty_tts()
 
     return TextToSpeechResult(
         audio_base64=result.get("audio_base64", ""),

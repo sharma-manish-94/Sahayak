@@ -1,5 +1,5 @@
 {
-  "$comment": "Sahayak PRODUCTION config — Claude Sonnet primary, Ollama local fallback. For dev-only (free), use openclaw.sahayak.dev.json instead.",
+  "$comment": "Sahayak SOVEREIGN config — 100% Indian stack. Sarvam LLM + Sarvam language services + data.gov.in. Zero dependency on US cloud APIs.",
 
   "models": {
     "providers": {
@@ -10,23 +10,7 @@
         "models": [
           {
             "id": "sarvam-m",
-            "name": "Sarvam M (sovereign, free)",
-            "reasoning": false,
-            "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": 32768,
-            "maxTokens": 8192
-          }
-        ]
-      },
-      "ollama": {
-        "baseUrl": "http://localhost:11434/v1",
-        "api": "openai-completions",
-        "apiKey": "ollama-local",
-        "models": [
-          {
-            "id": "qwen2.5:14b",
-            "name": "Qwen 2.5 14B (local fallback)",
+            "name": "Sarvam M (sovereign)",
             "reasoning": false,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
@@ -46,8 +30,7 @@
         "name": "Sahayak",
         "agentDir": "./sahayak/agent",
         "model": {
-          "primary": "anthropic/claude-sonnet-4-20250514",
-          "fallbacks": ["ollama/qwen2.5:14b"]
+          "primary": "sarvam/sarvam-m"
         },
         "skills": ["sahayak-lang", "sahayak-gov"]
       }
@@ -95,7 +78,7 @@
   },
 
   "plugins": {
-    "allow": ["whatsapp", "ollama"]
+    "allow": ["whatsapp"]
   },
 
   "tools": {
@@ -109,10 +92,8 @@
         "args": ["-m", "bhashini_lang.server"],
         "cwd": "./sahayak/bhashini-lang",
         "env": {
-          "LANG_PROVIDER": "${LANG_PROVIDER:-auto}",
-          "SARVAM_API_KEY": "${SARVAM_API_KEY}",
-          "BHASHINI_ULCA_USER_ID": "${BHASHINI_ULCA_USER_ID}",
-          "BHASHINI_ULCA_API_KEY": "${BHASHINI_ULCA_API_KEY}"
+          "LANG_PROVIDER": "sarvam",
+          "SARVAM_API_KEY": "${SARVAM_API_KEY}"
         }
       },
       "govdata-india": {
