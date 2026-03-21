@@ -1,0 +1,88 @@
+{
+  "$comment": "Sahayak-specific OpenClaw configuration. Merge with or use as the main openclaw.json config.",
+
+  "agents": {
+    "list": [
+      {
+        "id": "sahayak",
+        "default": true,
+        "name": "Sahayak",
+        "agentDir": "./sahayak/agent",
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-20250514"
+        },
+        "skills": ["sahayak-lang", "sahayak-gov"]
+      }
+    ]
+  },
+
+  "bindings": [
+    {
+      "agentId": "sahayak",
+      "match": {
+        "channel": "whatsapp"
+      }
+    }
+  ],
+
+  "channels": {
+    "whatsapp": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "groupPolicy": "disabled"
+    }
+  },
+
+  "messages": {
+    "tts": {
+      "auto": "inbound",
+      "provider": "edge",
+      "edge": {
+        "enabled": true,
+        "voice": "hi-IN-SwaraNeural",
+        "lang": "hi-IN"
+      }
+    }
+  },
+
+  "gateway": {
+    "bind": "loopback"
+  },
+
+  "skills": {
+    "allowBundled": ["sahayak-lang", "sahayak-gov"],
+    "load": {
+      "extraDirs": ["./skills"]
+    }
+  },
+
+  "plugins": {
+    "allow": ["whatsapp"]
+  },
+
+  "tools": {
+    "deny": ["bash", "computer", "file_write", "file_edit"]
+  },
+
+  "mcp": {
+    "servers": {
+      "bhashini-lang": {
+        "command": "python",
+        "args": ["-m", "bhashini_lang.server"],
+        "cwd": "./sahayak/bhashini-lang",
+        "env": {
+          "BHASHINI_ULCA_USER_ID": "${BHASHINI_ULCA_USER_ID}",
+          "BHASHINI_ULCA_API_KEY": "${BHASHINI_ULCA_API_KEY}"
+        }
+      },
+      "govdata-india": {
+        "command": "python",
+        "args": ["-m", "govdata_india.server"],
+        "cwd": "./sahayak/govdata-india",
+        "env": {
+          "DATA_GOV_IN_API_KEY": "${DATA_GOV_IN_API_KEY}"
+        }
+      }
+    }
+  }
+}

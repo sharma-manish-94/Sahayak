@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  govdata-india:
+    build:
+      context: ./govdata-india
+      dockerfile: Dockerfile
+    environment:
+      - DATA_GOV_IN_API_KEY=${DATA_GOV_IN_API_KEY}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  bhashini-lang:
+    build:
+      context: ./bhashini-lang
+      dockerfile: Dockerfile
+    environment:
+      - BHASHINI_ULCA_USER_ID=${BHASHINI_ULCA_USER_ID}
+      - BHASHINI_ULCA_API_KEY=${BHASHINI_ULCA_API_KEY}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  openclaw:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:18789:18789"
+    environment:
+      - DATA_GOV_IN_API_KEY=${DATA_GOV_IN_API_KEY}
+      - BHASHINI_ULCA_USER_ID=${BHASHINI_ULCA_USER_ID}
+      - BHASHINI_ULCA_API_KEY=${BHASHINI_ULCA_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      - govdata-india
+      - bhashini-lang
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
