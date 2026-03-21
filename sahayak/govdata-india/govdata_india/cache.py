@@ -1,9 +1,13 @@
-"""Generic TTL cache for API responses."""
+"""Generic TTL cache and shared HTTP helpers for data.gov.in API."""
 
 from __future__ import annotations
 
 import time
 from typing import Any
+
+import httpx
+
+_MAX_RETRIES = 1
 
 
 class TTLCache:
@@ -29,3 +33,28 @@ class TTLCache:
 
     def clear(self) -> None:
         self._store.clear()
+
+
+async def fetch_with_retry(url: str, params: dict[str, str]) -> dict:
+    """GET request with one retry on 5xx errors and 10s timeout."""
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, params=params)
+                if resp.status_code >= 500 and attempt < _MAX_RETRIES:
+                    last_exc = httpx.HTTPStatusError(
+                        f"Server error {resp.status_code}",
+                        request=resp.request, response=resp,
+                    )
+                    continue
+                resp.raise_for_status()
+                return resp.json()
+        except httpx.HTTPStatusError:
+            raise
+        except httpx.HTTPError as exc:
+            last_exc = exc
+            if attempt < _MAX_RETRIES:
+                continue
+            raise
+    raise last_exc or httpx.HTTPError("Request failed after retries")

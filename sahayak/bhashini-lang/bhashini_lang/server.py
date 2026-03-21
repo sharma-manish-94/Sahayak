@@ -107,15 +107,21 @@ async def speech_to_text(audio_base64: str, source_lang: str | None = None) -> d
     ).model_dump()
 
 
+_TTS_MAX_CHARS = 500
+
+
 @mcp.tool()
 async def text_to_speech(text: str, target_lang: str = "hi", gender: str = "female") -> dict:
     """Convert text to speech audio.
 
     Args:
-        text: Text to synthesize
+        text: Text to synthesize (truncated to 500 chars if longer)
         target_lang: Language code, e.g. "hi" for Hindi
         gender: Voice gender — "male" or "female"
     """
+    if len(text) > _TTS_MAX_CHARS:
+        text = text[:_TTS_MAX_CHARS].rsplit(" ", 1)[0] + "..."
+
     provider = _get_provider()
     try:
         result = await provider.text_to_speech(text, target_lang, gender)

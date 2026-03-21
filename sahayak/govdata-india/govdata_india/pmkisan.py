@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import httpx
 
-from .cache import TTLCache
+from .cache import TTLCache, fetch_with_retry
 from .types import PMKisanStatus, PMKisanResponse
 
 _RESOURCE_ID = "a2dac80e-8e2c-4d0e-8194-5b498c9e24f3"
@@ -38,10 +38,7 @@ async def get_pm_kisan_status(
         params["filters[block_name]"] = block.title()
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{_BASE_URL}/{_RESOURCE_ID}", params=params)
-            resp.raise_for_status()
-            data = resp.json()
+        data = await fetch_with_retry(f"{_BASE_URL}/{_RESOURCE_ID}", params)
     except (httpx.HTTPError, Exception) as exc:
         return PMKisanResponse(message=f"Error fetching PM-KISAN data: {exc}")
 

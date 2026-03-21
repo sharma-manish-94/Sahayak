@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import httpx
 
-from .cache import TTLCache
+from .cache import TTLCache, fetch_with_retry
 from .types import WeatherInfo, WeatherResponse
 
 _RESOURCE_ID = "62bc2e75-6840-447e-8835-4f8f6fef2b4c"
@@ -34,10 +34,7 @@ async def get_weather(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{_BASE_URL}/{_RESOURCE_ID}", params=params)
-            resp.raise_for_status()
-            data = resp.json()
+        data = await fetch_with_retry(f"{_BASE_URL}/{_RESOURCE_ID}", params)
     except (httpx.HTTPError, Exception) as exc:
         return WeatherResponse(message=f"Error fetching weather data: {exc}")
 
