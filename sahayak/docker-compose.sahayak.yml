@@ -5,6 +5,8 @@ services:
     build:
       context: ./govdata-india
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       - DATA_GOV_IN_API_KEY=${DATA_GOV_IN_API_KEY}
     read_only: true
@@ -18,6 +20,8 @@ services:
     build:
       context: ./bhashini-lang
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       - BHASHINI_ULCA_USER_ID=${BHASHINI_ULCA_USER_ID}
       - BHASHINI_ULCA_API_KEY=${BHASHINI_ULCA_API_KEY}
@@ -34,6 +38,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:18789:18789"
+    env_file:
+      - .env
     environment:
       - DATA_GOV_IN_API_KEY=${DATA_GOV_IN_API_KEY}
       - BHASHINI_ULCA_USER_ID=${BHASHINI_ULCA_USER_ID}
